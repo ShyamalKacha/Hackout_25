@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Green Hydrogen Infrastructure Dashboard</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            color: #333;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        
+        .dashboard-header {
+            background: linear-gradient(90deg, #1a2980, #26d0ce);
+            color: white;
+            padding: 15px 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .dashboard-title {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .dashboard-title i {
+            font-size: 28px;
+        }
+        
+        .dashboard-subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+        
+        .container {
+            display: flex;
+            height: calc(100vh - 70px);
+        }
+        
+        /* Sidebar Styles */
+        .sidebar {
+            width: 400px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            box-shadow: 3px 0 15px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+            z-index: 1000;
+            border-right: 1px solid #e0e0e0;
+        }
+        
+        .logo-section {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 25px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .logo-section h1 {
+            color: #1a2980;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 22px;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+        
+        .logo-section p {
+            color: #666;
+            font-size: 13px;
+            font-weight: 300;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        
+        .section h2 {
+            color: #1a2980;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 18px;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #26d0ce;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .form-group {
+            margin-bottom: 18px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #444;
+            font-size: 14px;
+        }
+        
+        .form-group select,
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        .form-group select:focus,
+        .form-group input:focus {
+            outline: none;
+            border-color: #26d0ce;
+            box-shadow: 0 0 0 3px rgba(38, 208, 206, 0.2);
+        }
+        
+        .btn {
+            background: linear-gradient(90deg, #1a2980, #26d0ce);
+            color: white;
+            border: none;
+            padding: 14px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            width: 100%;
+            transition: all 0.3s ease;
+            font-family: 'Montserrat', sans-serif;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 15px rgba(26, 41, 128, 0.3);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(26, 41, 128, 0.4);
+        }
+        
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .results {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 25px;
+            display: none;
+            color: white;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .results h3 {
+            color: white;
+            margin-bottom: 15px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .result-item {
+            margin-bottom: 12px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .result-item strong {
+            color: #ffd700;
+            font-weight: 600;
+        }
+        
+        /* Map Styles */
+        .map-container {
+            flex: 1;
+            position: relative;
+            background: #f0f2f5;
+        }
+        
+        #map {
+            height: 100%;
+            width: 100%;
+            border-radius: 0 0 0 0;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 25px;
+            right: 25px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 18px 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+            display: none;
+            z-index: 1000;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 500;
+            color: #1a2980;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #1a2980;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .legend {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+            line-height: 22px;
+            color: #333;
+            font-size: 13px;
+            font-family: 'Roboto', sans-serif;
+            max-width: 250px;
+        }
+        
+        .legend h4 {
+            margin: 0 0 12px 0;
+            color: #1a2980;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .legend-color {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            margin-right: 10px;
+            border: 1px solid #666;
+        }
+        
+        .data-summary {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .summary-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            color: white;
+            transition: transform 0.3s ease;
+        }
+        
+        .summary-card:hover {
+            transform: translateY(-3px);
+        }
+        
+        .summary-card .number {
+            font-size: 24px;
+            font-weight: 700;
+            font-family: 'Montserrat', sans-serif;
+            margin-bottom: 5px;
+        }
+        
+        .summary-card .label {
+            font-size: 12px;
+            font-weight: 300;
+            opacity: 0.9;
+        }
+        
+        .error-message {
+            background: linear-gradient(135deg, #ff416c, #ff4b2b);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(255, 65, 108, 0.3);
+        }
+        
+        .layer-control {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+            margin-bottom: 15px;
+            max-width: 300px;
+        }
+        
+        .layer-control h4 {
+            margin: 0 0 15px 0;
+            color: #1a2980;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+        }
+        
+        .layer-item {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .layer-item input {
+            margin-right: 10px;
+            width: 18px;
+            height: 18px;
+        }
+        
+        .layer-item label {
+            font-size: 14px;
+            color: #444;
+            cursor: pointer;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #26d0ce;
+        }
+        
+        .stat-card .value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1a2980;
+            font-family: 'Montserrat', sans-serif;
+        }
+        
+        .stat-card .label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        @media (max-width: 1200px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                max-height: 400px;
+            }
+            
+            .map-container {
+                height: 60vh;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .data-summary {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .dashboard-header {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+                padding: 12px 15px;
+            }
+            
+            .sidebar {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-header">
+        <div class="dashboard-title">
+            <i class="fas fa-atom"></i>
+            <div>
+                <div>Global Hydrogen Infrastructure</div>
+                <div class="dashboard-subtitle">Worldwide Mapping & Optimization Dashboard</div>
+            </div>
+        </div>
+        <div class="dashboard-stats">
+            <div class="stats-grid" id="dashboard-stats">
+                <!-- Stats will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="sidebar">
+            <div class="logo-section">
+                <h1><i class="fas fa-hydrogen"></i> Hydrogen Intelligence</h1>
+                <p>Advanced Infrastructure Planning & Optimization</p>
+            </div>
+            
+            <div class="section">
+                <h2><i class="fas fa-sliders-h"></i> Optimization Parameters</h2>
+                <div class="form-group">
+                    <label for="region">Target Region:</label>
+                    <select id="region">
+                        <option value="global">Global (All Regions)</option>
+                        <!-- Regions will be populated by JavaScript -->
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="technology">Preferred Technology:</label>
+                    <select id="technology">
+                        <option value="electrolysis">Electrolysis (Green H₂)</option>
+                        <option value="steam_methane_reforming">Steam Methane Reforming</option>
+                        <option value="coal_gasification">Coal Gasification</option>
+                        <option value="biomass_gasification">Biomass Gasification</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="min_capacity">Minimum Renewable Capacity (MW):</label>
+                    <input type="number" id="min_capacity" value="100" min="0" step="10">
+                </div>
+                
+                <div class="form-group">
+                    <label for="max_distance">Max Distance to Renewable (km):</label>
+                    <input type="number" id="max_distance" value="50" min="1" max="200">
+                </div>
+                
+                <div class="form-group">
+                    <label for="min_demand">Min Demand Proximity Score:</label>
+                    <input type="number" id="min_demand" value="100" min="0" max="2000">
+                </div>
+                
+                <div class="form-group">
+                    <label for="budget">Project Budget ($ Millions):</label>
+                    <input type="number" id="budget" value="10" min="0" step="1">
+                </div>
+                
+                <button id="optimize-btn" class="btn">
+                    <i class="fas fa-calculator"></i> Find Optimal Location
+                </button>
+                
+                <div class="error-message" id="error-message"></div>
+                
+                <div class="results" id="results">
+                    <h3><i class="fas fa-map-marker-alt"></i> Optimal Location Results</h3>
+                    <div id="results-content"></div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2><i class="fas fa-chart-bar"></i> Infrastructure Overview</h2>
+                <div class="data-summary" id="data-summary">
+                    <!-- Summary cards will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="map-container">
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <span>Loading global infrastructure data...</span>
+            </div>
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        // Initialize the map
+        const map = L.map('map').setView([20, 0], 2);
+        
+        // Add OpenStreetMap tiles with custom styling
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            maxZoom: 18
+        }).addTo(map);
+        
+        // Create layer groups for different data types
+        const layers = {
+            renewable: L.layerGroup().addTo(map),
+            production: L.layerGroup().addTo(map),
+            storage: L.layerGroup().addTo(map),
+            demand: L.layerGroup().addTo(map),
+            transport: L.layerGroup().addTo(map),
+            environmental: L.layerGroup().addTo(map),
+            optimal: L.layerGroup()
+        };
+        
+        // Add layer control
+        const overlayMaps = {
+            "Renewable Energy": layers.renewable,
+            "Production Facilities": layers.production,
+            "Storage Facilities": layers.storage,
+            "Demand Centers": layers.demand,
+            "Transport Infrastructure": layers.transport,
+            "Environmental Constraints": layers.environmental,
+            "Optimal Locations": layers.optimal
+        };
+        
+        L.control.layers(null, overlayMaps, {
+            collapsed: false,
+            position: 'topleft'
+        }).addTo(map);
+        
+        // Add legend
+        const legend = L.control({position: 'bottomright'});
+        
+        legend.onAdd = function(map) {
+            const div = L.DomUtil.create('div', 'legend');
+            div.innerHTML = `
+                <h4>Infrastructure Legend</h4>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ff7800;"></div>
+                    <span>Renewable Energy</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #0000ff;"></div>
+                    <span>Production Facilities</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #008000;"></div>
+                    <span>Storage Facilities</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ff0000;"></div>
+                    <span>Demand Centers</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #800080;"></div>
+                    <span>Transport Routes</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ffa500;"></div>
+                    <span>Environmental Areas</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ffff00; border: 2px solid #000;"></div>
+                    <span>Optimal Location</span>
+                </div>
+            `;
+            return div;
+        };
+        
+        legend.addTo(map);
+        
+        // Fetch and display data
+        async function loadData() {
+            try {
+                document.getElementById('loading').style.display = 'flex';
+                
+                const response = await fetch('/api/data');
+                const data = await response.json();
+                
+                // Load regions
+                loadRegions();
+                
+                // Display data summary
+                displayDataSummary(data);
+                updateDashboardStats(data);
+                
+                // Add all data categories to map
+                addRenewableEnergyToMap(data.renewable_energy || []);
+                addProductionFacilitiesToMap(data.hydrogen_production || []);
+                addStorageFacilitiesToMap(data.storage_facilities || []);
+                addDemandCentersToMap(data.demand_centers || []);
+                addTransportInfrastructureToMap(data.transport_infrastructure || []);
+                addEnvironmentalConstraintsToMap(data.environmental_constraints || []);
+                
+                document.getElementById('loading').style.display = 'none';
+            } catch (error) {
+                console.error('Error loading ', error);
+                document.getElementById('loading').style.display = 'none';
+                alert('Error loading  ' + error.message);
+            }
+        }
+        
+        // Load regions for dropdown
+        async function loadRegions() {
+            try {
+                const response = await fetch('/api/regions');
+                const regions = await response.json();
+                
+                const regionSelect = document.getElementById('region');
+                regions.forEach(region => {
+                    const option = document.createElement('option');
+                    option.value = region;
+                    option.textContent = region;
+                    regionSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading regions:', error);
+            }
+        }
+        
+        // Add renewable energy sites to map
+        function addRenewableEnergyToMap(sites) {
+            sites.forEach(site => {
+                const marker = L.circleMarker([site.latitude, site.longitude], {
+                    radius: 10,
+                    fillColor: "#ff7800",
+                    color: "#fff",
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(layers.renewable);
+                
+                marker.bindPopup(`
+                    <div style="min-width: 250px;">
+                        <h3 style="margin: 0 0 10px 0; color: #ff7800;">${site.name}</h3>
+                        <p style="margin: 5px 0;"><strong>Type:</strong> ${site.type}</p>
+                        <p style="margin: 5px 0;"><strong>Capacity:</strong> ${site.capacity_mw} MW</p>
+                        <p style="margin: 5px 0;"><strong>Country:</strong> ${site.country || 'N/A'}</p>
+                        <p style="margin: 5px 0;"><strong>Region:</strong> ${site.region || 'N/A'}</p>
+                        <p style="margin: 5px 0; font-size: 12px; color: #666;">ID: ${site.id}</p>
+                    </div>
+                `);
+            });
+        }
+        
+        // Add production facilities to map
+        function addProductionFacilitiesToMap(facilities) {
+            facilities.forEach(facility => {
+                const marker = L.circleMarker([facility.latitude, facility.longitude], {
+                    radius: 11,
+                    fillColor: "#0000ff",
+                    color: "#fff",
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(layers.production);
+                
+                marker.bindPopup(`
+                    <div style="min-width: 250px;">
+                        <h3 style="margin: 0 0 10px 0; color: #0000ff;">${facility.name}</h3>
+                        <p style="margin: 5px 0;"><strong>Technology:</strong> ${facility.technology}</p>
+                        <p style="margin: 5px 0;"><strong>Capacity:</strong> ${facility.capacity_tpd} tons/day</p>
+                        <p style="margin: 5px 0;"><strong>Status:</strong> ${facility.status}</p>
+                        <p style="margin: 5px 0;"><strong>Country:</strong> ${facility.country || 'N/A'}</p>
+                        <p style="margin: 5px 0;"><strong>Region:</strong> ${facility.region || 'N/A'}</p>
+                        <p style="margin: 5px 0; font-size: 12px; color: #666;">ID: ${facility.id}</p>
+                    </div>
+                `);
+            });
+        }
+        
+        // Add storage facilities to map
+        function addStorageFacilitiesToMap(facilities) {
+            facilities.forEach(facility => {
+                const marker = L.circleMarker([facility.latitude, facility.longitude], {
+                    radius: 9,
+                    fillColor: "#008000",
+                    color: "#fff",
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(layers.storage);
+                
+                marker.bindPopup(`
+                    <div style="min-width: 250px;">
+                        <h3 style="margin: 0 0 10px 0; color: #008000;">${facility.name}</h3>
+                        <p style="margin: 5px 0;"><strong>Type:</strong> ${facility.type}</p>
+                        <p style="margin: 5px 0;"><strong>Capacity:</strong> ${facility.capacity_tons} tons</p>
+                        <p style="margin: 5px 0;"><strong>Status:</strong> ${facility.status}</p>
+                        <p style="margin: 5px 0;"><strong>Country:</strong> ${facility.country || 'N/A'}</p>
+                        <p style="margin: 5px 0;"><strong>Region:</strong> ${facility.region || 'N/A'}</p>
+                        <p style="margin: 5px 0; font-size: 12px; color: #666;">ID: ${facility.id}</p>
+                    </div>
+                `);
+            });
+        }
+        
+        // Add demand centers to map
+        function addDemandCentersToMap(centers) {
+            centers.forEach(center => {
+                const marker = L.circleMarker([center.latitude, center.longitude], {
+                    radius: 12,
+                    fillColor: "#ff0000",
+                    color: "#fff",
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(layers.demand);
+                
+                marker.bindPopup(`
+                    <div style="min-width: 250px;">
+                        <h3 style="margin: 0 0 10px 0; color: #ff0000;">${center.name}</h3>
+                        <p style="margin: 5px 0;"><strong>Sector:</strong> ${center.sector}</p>
+                        <p style="margin: 5px 0;"><strong>Annual Demand:</strong> ${center.annual_demand_tons} tons</p>
+                        <p style="margin: 5px 0;"><strong>Country:</strong> ${center.country || 'N/A'}</p>
+                        <p style="margin: 5px 0;"><strong>Region:</strong> ${center.region || 'N/A'}</p>
+                        <p style="margin: 5px 0; font-size: 12px; color: #666;">ID: ${center.id}</p>
+                    </div>
+                `);
+            });
+        }
+        
+        // Add transport infrastructure to map
+        function addTransportInfrastructureToMap(infrastructures) {
+            infrastructures.forEach(infra => {
+                if (infra.start_latitude && infra.start_longitude && 
+                    infra.end_latitude && infra.end_longitude) {
+                    const line = L.polyline([
+                        [infra.start_latitude, infra.start_longitude],
+                        [infra.end_latitude, infra.end_longitude]
+                    ], {
+                        color: "#800080",
+                        weight: 4,
+                        opacity: 0.7
+                    }).addTo(layers.transport);
+                    
+                    line.bindPopup(`
+                        <div style="min-width: 250px;">
+                            <h3 style="margin: 0 0 10px 0; color: #800080;">${infra.name}</h3>
+                            <p style="margin: 5px 0;"><strong>Mode:</strong> ${infra.mode}</p>
+                            <p style="margin: 5px 0;"><strong>Distance:</strong> ${infra.distance_km} km</p>
+                            <p style="margin: 5px 0;"><strong>Capacity:</strong> ${infra.capacity_tpd} tons/day</p>
+                            <p style="margin: 5px 0;"><strong>Country:</strong> ${infra.country || 'N/A'}</p>
+                            <p style="margin: 5px 0;"><strong>Region:</strong> ${infra.region || 'N/A'}</p>
+                            <p style="margin: 5px 0; font-size: 12px; color: #666;">ID: ${infra.id}</p>
+                        </div>
+                    `);
+                }
+            });
+        }
+        
+        // Add environmental constraints to map
+        function addEnvironmentalConstraintsToMap(constraints) {
+            constraints.forEach(constraint => {
+                if (constraint.latitude && constraint.longitude) {
+                    const marker = L.circleMarker([constraint.latitude, constraint.longitude], {
+                        radius: 8,
+                        fillColor: "#ffa500",
+                        color: "#fff",
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.8
+                    }).addTo(layers.environmental);
+                    
+                    marker.bindPopup(`
+                        <div style="min-width: 250px;">
+                            <h3 style="margin: 0 0 10px 0; color: #ffa500;">${constraint.name}</h3>
+                            <p style="margin: 5px 0;"><strong>Type:</strong> ${constraint.type}</p>
+                            <p style="margin: 5px 0;"><strong>Area:</strong> ${constraint.area_hectares} hectares</p>
+                            <p style="margin: 5px 0;"><strong>Restriction:</strong> ${constraint.restriction_level}</p>
+                            <p style="margin: 5px 0;"><strong>Country:</strong> ${constraint.country || 'N/A'}</p>
+                            <p style="margin: 5px 0;"><strong>Region:</strong> ${constraint.region || 'N/A'}</p>
+                            <p style="margin: 5px 0; font-size: 12px; color: #666;">ID: ${constraint.id}</p>
+                        </div>
+                    `);
+                }
+            });
+        }
+        
+        // Display data summary
+        function displayDataSummary(data) {
+            const summaryContainer = document.getElementById('data-summary');
+            summaryContainer.innerHTML = '';
+            
+            const categories = [
+                { key: 'renewable_energy', label: 'Renewable Sites', color: '#ff7800', icon: '☀️' },
+                { key: 'hydrogen_production', label: 'Production Facilities', color: '#0000ff', icon: '🏭' },
+                { key: 'storage_facilities', label: 'Storage Facilities', color: '#008000', icon: '🛢️' },
+                { key: 'demand_centers', label: 'Demand Centers', color: '#ff0000', icon: '🏭' },
+                { key: 'transport_infrastructure', label: 'Transport Routes', color: '#800080', icon: '🚚' },
+                { key: 'environmental_constraints', label: 'Environmental Areas', color: '#ffa500', icon: '🌳' }
+            ];
+            
+            categories.forEach(category => {
+                const count = data[category.key] ? data[category.key].length : 0;
+                const card = document.createElement('div');
+                card.className = 'summary-card';
+                card.innerHTML = `
+                    <div class="number">${count}</div>
+                    <div class="label">${category.icon} ${category.label}</div>
+                `;
+                summaryContainer.appendChild(card);
+            });
+        }
+        
+        // Update dashboard stats
+        function updateDashboardStats(data) {
+            const statsContainer = document.getElementById('dashboard-stats');
+            statsContainer.innerHTML = '';
+            
+            // Calculate totals
+            const totalRenewable = data.renewable_energy ? data.renewable_energy.length : 0;
+            const totalProduction = data.hydrogen_production ? data.hydrogen_production.length : 0;
+            const totalDemand = data.demand_centers ? data.demand_centers.reduce((sum, center) => sum + center.annual_demand_tons, 0) : 0;
+            
+            const stats = [
+                { label: 'Renewable Sites', value: totalRenewable, unit: '' },
+                { label: 'Production Facilities', value: totalProduction, unit: '' },
+                { label: 'Annual Demand', value: Math.round(totalDemand / 1000), unit: 'k tons' }
+            ];
+            
+            stats.forEach(stat => {
+                const statCard = document.createElement('div');
+                statCard.className = 'stat-card';
+                statCard.innerHTML = `
+                    <div class="value">${stat.value}${stat.unit}</div>
+                    <div class="label">${stat.label}</div>
+                `;
+                statsContainer.appendChild(statCard);
+            });
+        }
+        
+        // Optimize location based on user input
+        document.getElementById('optimize-btn').addEventListener('click', async function() {
+            const btn = this;
+            const originalText = btn.innerHTML;
+            
+            try {
+                btn.innerHTML = '<div class="spinner"></div> Calculating Optimal Location...';
+                btn.disabled = true;
+                document.getElementById('error-message').style.display = 'none';
+                document.getElementById('results').style.display = 'none';
+                
+                // Get user preferences
+                const preferences = {
+                    region: document.getElementById('region').value,
+                    technology: document.getElementById('technology').value,
+                    min_capacity: document.getElementById('min_capacity').value,
+                    max_distance_to_renewable: document.getElementById('max_distance').value,
+                    min_demand_proximity: document.getElementById('min_demand').value,
+                    budget: document.getElementById('budget').value * 1000000 // Convert to dollars
+                };
+                
+                // Send request to optimization API
+                const response = await fetch('/api/optimize', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(preferences)
+                });
+                
+                const result = await response.json();
+                
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+                
+                // Display results
+                displayOptimizationResults(result);
+                
+                // Add optimal location to map
+                if (result.optimal_location) {
+                    // Clear previous optimal locations
+                    layers.optimal.clearLayers();
+                    
+                    const location = result.optimal_location;
+                    const marker = L.marker([location.latitude, location.longitude], {
+                        icon: L.divIcon({
+                            className: 'optimal-location-marker',
+                            html: '<div style="background: #ffff00; width: 30px; height: 30px; border-radius: 50%; border: 3px solid #000; box-shadow: 0 0 15px rgba(255,255,0,0.8); display: flex; align-items: center; justify-content: center;"><i class="fas fa-star" style="color: #000; font-size: 14px;"></i></div>',
+                            iconSize: [30, 30],
+                            iconAnchor: [15, 15]
+                        })
+                    }).addTo(layers.optimal);
+                    
+                    marker.bindPopup(`
+                        <div style="min-width: 280px;">
+                            <h3 style="margin: 0 0 10px 0; color: #ffd700; text-align: center;">⭐ OPTIMAL LOCATION ⭐</h3>
+                            <p style="margin: 5px 0;"><strong>Score:</strong> ${location.score}</p>
+                            <p style="margin: 5px 0;"><strong>Nearby Renewable:</strong> ${location.renewable_source}</p>
+                            <p style="margin: 5px 0;"><strong>Distance to Renewable:</strong> ${location.distance_to_renewable_km} km</p>
+                            <p style="margin: 5px 0;"><strong>Renewable Capacity:</strong> ${location.renewable_capacity_mw} MW</p>
+                            <p style="margin: 5px 0;"><strong>Demand Proximity:</strong> ${location.avg_demand_proximity_score}</p>
+                            <p style="margin: 5px 0;"><strong>Country:</strong> ${location.country}</p>
+                            <p style="margin: 5px 0;"><strong>Region:</strong> ${location.region}</p>
+                        </div>
+                    `);
+                    
+                    // Center map on optimal location
+                    map.setView([location.latitude, location.longitude], 6);
+                }
+                
+            } catch (error) {
+                document.getElementById('error-message').textContent = error.message;
+                document.getElementById('error-message').style.display = 'block';
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        });
+        
+        // Display optimization results
+        function displayOptimizationResults(result) {
+            const resultsContent = document.getElementById('results-content');
+            const resultsContainer = document.getElementById('results');
+            
+            if (result.optimal_location) {
+                const location = result.optimal_location;
+                resultsContent.innerHTML = `
+                    <div class="result-item">
+                        <strong>📍 Location:</strong> ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}
+                    </div>
+                    <div class="result-item">
+                        <strong>🌍 Country:</strong> ${location.country}
+                    </div>
+                    <div class="result-item">
+                        <strong>🌎 Region:</strong> ${location.region}
+                    </div>
+                    <div class="result-item">
+                        <strong>⭐ Optimization Score:</strong> ${location.score}
+                    </div>
+                    <div class="result-item">
+                        <strong>☀️ Nearby Renewable Source:</strong> ${location.renewable_source}
+                    </div>
+                    <div class="result-item">
+                        <strong>⚡ Renewable Type:</strong> ${location.renewable_type}
+                    </div>
+                    <div class="result-item">
+                        <strong>🔋 Renewable Capacity:</strong> ${location.renewable_capacity_mw} MW
+                    </div>
+                    <div class="result-item">
+                        <strong>📏 Distance to Renewable:</strong> ${location.distance_to_renewable_km} km
+                    </div>
+                    <div class="result-item">
+                        <strong>🏭 Demand Proximity Score:</strong> ${location.avg_demand_proximity_score}
+                    </div>
+                `;
+                resultsContainer.style.display = 'block';
+            } else {
+                resultsContent.innerHTML = '<p style="text-align: center; margin: 15px 0; color: #ffd700;">No optimal location found with current criteria.</p>';
+                resultsContainer.style.display = 'block';
+            }
+        }
+        
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            loadData();
+        });
+    </script>
+</body>
+</html>
